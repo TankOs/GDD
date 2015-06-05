@@ -1,0 +1,35 @@
+# Introduction
+
+Game development is a fascinating and fun thing a lot of people enjoy. Some are
+even making a living out of it, others do it as a hobby. For whatever reasons
+you are programming games, I'd like to congratulate you for choosing one of the
+hardest and most difficult areas of programming. Programming games involves a
+lot of topics, for example:
+
+* Fast algorithms
+* A lot of different sub-systems
+* Real-time data processing
+* Graphics rendering
+* Audio processing
+* Game design/logic
+* Data (De-)serialization and -synchronization
+
+When asking people *why* they are making games, you often get a whole bunch of
+answers: *"I like playing games!"*, *"I've always had that special idea I
+wanted to realize!"*, *"I like the challenge of making games"* and much more.
+One thing however is for sure: It's tough. It's really tough. If you're new to
+game development: Prepare for a wild ride with ups and downs, doing a lot of
+research, having motivation problems — and much more. The *Game Development
+Design* series is mostly for developers who are doing game development in their
+free time or as some kind of indie developer. Professional — that means "I do
+it for the money only" — programmers usually do not care so much about elegant
+and passionate code design. And that's what this series is about: Experimenting
+with modern approaches of doing things, having no problems doing big chunks of
+refactoring — or in general: Working with lively source code.
+
+All GDD articles will cover one topic of game development. I do not claim that
+what you read here is the best of the best. However I can guarantee that a lot
+of effort had been put into tailoring the solutions I want to show here.
+Nevertheless: If you find errors or don't like what you read, then please write
+to gdd@boxbox.org so that I've got the chance to improve this. When we look at
+source code, it will be either pseudo or C++ code.

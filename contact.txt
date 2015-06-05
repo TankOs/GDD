@@ -1,0 +1,11 @@
+# Contact and Feedback
+
+If you've got any feedback for the GDD articles, feel free to contact the
+author:
+
+* E-mail: gdd@boxbox.org
+* Jabber: tank@boxbox.org
+
+All articles are also available online at [Tank's
+Blog](http://stefan.boxbox.org/), where you may also leave a comment or ask
+questions.

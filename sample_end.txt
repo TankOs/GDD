@@ -1,0 +1,6 @@
+# This is the end...
+
+...of the book sample. You have two choices:
+
+* Continue reading at [Tank's Blog](http://stefan.boxbox.org) for free.
+* Consider buying the articles in PDF, EPUB and MOBI formats at [Leanpub](https://leanpub.com/game-development-design) to support the author.

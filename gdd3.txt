@@ -1,0 +1,186 @@
+# GDD#3: Message Bus
+
+There's a common problem in software design that doesn't only exist in game
+development called code dependencies. In a project, small or big, every
+developer comes to the point where several modules depend on each other: The
+GUI renderer depends on the health points and inventory, the inventory depends
+on the object pool and player state, the rendering engine depends on the object
+pool, textures, geometry, and much more.
+
+One goal of object-oriented programming is to write modular (thus flexible)
+source code, and one of the biggest rules is to keep dependencies low. This
+article will talk about a system that implements a message bus with
+fire-and-forget behavior, with the main target being eliminating dependencies
+in the sources.
+
+Let's at first look at an example diagram of a game's class design:
+
+![](images/dependencies.png)
+
+At the first sight it already looks terrible: It seems that all the
+classes/modules in the diagram are all dependent on each other, which means all
+the code we write is not modular and can't be reused in other projects. Another
+disadvantage is compile times: TUs ([translation
+units](http://en.wikipedia.org/wiki/Translation_unit_(programming))) have
+to include code that it's dependent on. Whenever the included code changes
+(mostly header files), the TU needs to be recompiled (there are tricks like
+[forward declaration](http://en.wikipedia.org/wiki/Forward_declaration)
+though).
+
+The real pain however arises when you start giving references/pointers to
+modules. For example let's look at the the Script module in the diagram above,
+which is a module for working with scripts that control some aspects of the
+game: It's dependent on Map, ComponentSystem, Renderer and Object, so the
+constructor might look similar to this:
+
+{:lang="cpp"}
+~~~~~~
+class Script {
+	public:
+		Script(
+			ComponentSystem&,
+			Map&,
+			Renderer&,
+			Object&
+		);
+};
+~~~~~~
+
+Wherever you instantiate Script, you need to have references to all the
+dependencies. If one of the dependencies change, for example due to a
+refactoring, all dependencies have to be updated, too.
+
+I'm sure a lot of you guys have already experienced such code design and always
+got to the point where you got annoyed by it. Let's see how we can avoid it.
+
+## Replacing the dependencies with a message bus
+
+We'll now be talking about an approach that's really not new in software
+design; some programming languages even have such concepts built-in, like
+[Smalltalk](http://en.wikipedia.org/wiki/Smalltalk#Messages).
+
+A *message bus* is a connection between one or more senders and/or receivers.
+Think of it like a connection between computers in a [bus
+topology](http://microsoftmag.files.wordpress.com/2011/02/bus-topology1.jpg):
+Every node can send a message by passing it to the bus, and all connected nodes
+will receive that message. If the node is processed and if a reply is sent is
+completely up to each receiver itself.
+
+Having modules connected to a message bus gives us some advantages:
+
+* Every module is isolated, it does not need to know of any others.
+* Every module can react to any message that's being sent to the bus; that
+	means you get extra flexibility for free, without increasing dependencies at
+	all.
+* It's much easier to follow the YAGNI workflow: For example you're going to
+	add weapons. At first you implement the physics, then you add visuals in the
+	renderer, and then playing sounds. All of those features can be implemented
+	independently at any time, without interrupting each other.
+* You save yourself from thinking a lot about how to connect certain modules to
+	each other. Sometimes it takes a huge amount of time, including drawing
+	diagrams/dependency graphs.
+
+## Messages
+
+What's a message? Quite simple:
+
+Every message should have a unique message ID for identification purposes. This
+can be basically anything: An integer, a string, whatever. Personally I chose
+to use hashed strings for performance reasons while still keeping readability
+(take a look at [std::hash](http://en.cppreference.com/w/cpp/utility/hash)).
+
+Furthermore messages can (but don't have to) include attributes/parameters. The
+attributes should be preferably be of any type.
+
+Example message:
+
+* **Message ID:** "entity_created"
+* **Attribute "entity_id":** 1337
+* **Attribute "position":** 1.0f, 2.0f, 3.0f
+* **Attribute "color":** "green"
+
+## Sending useful messages
+
+We now have a basic understanding of how the message bus and messages looks
+like. However it's very important to not send messages that control other
+modules in a strict way — i.e. sending messages *the correct way*.
+
+For example there are three modules: Script, Network and Renderer. A script
+decides to create a new game object, and that object needs to be rendered and
+sent over the wire, so that others can see it too. This requires us to somehow
+inform Network and Renderer of the entity creation.
+
+Some of you would probably come up with messages like this:
+
+**First message, to Renderer:**
+
+* **Message ID:** "render_object"
+* **Attribute "type":** "cube"
+* **Attribute "color":** "blue"
+
+**First message, to Network:**
+
+* **Message ID:** "send_object"
+* **Attribute "type":** "cube"
+* **Attribute "color":** "blue"
+
+**DO NOT DO THIS**
+
+That's really not any better than writing code that's dependent on a lot of
+other code. Instead it will couple the messages to specific receivers. With the
+kind of messages above you try to control other modules, and in order to be
+able to control something you have to know that it exists (code-wise). That's a
+classic dependency, just in a different form.
+
+So instead of telling others what to do, you tell everybody what happened. If
+an entity got created, you send a "entity_created" message with all relevant
+information. The modules that receive that message can then decide if they want
+to take action on it, or not.
+
+## What to send to the bus
+
+When you start using a message bus, you'll quickly want to decouple everything.
+That's a good thing in my opinion. From my experience I can tell that even if
+you tend to overuse this approach, it still leads to very good code design.
+
+It's even okay to feed the bus with high-frequency events like mouse moves or
+entity position changes. Just keep in mind to optimize your message bus system
+good enough to be able to handle a high amount of messages in (very) short
+times. (But please be aware that premature optimization is still the root of
+all evil! — Donald Knuth)
+
+## Implementation hints
+
+Like mentioned before the most critical part is identifying messages, because
+that's what every receiver has to do. Instead of sending messages to all
+receivers you might also think about adding a hooking mechanism where receivers
+can subscribe to specific message IDs only.
+
+One thing that you can do to improve the identification process is using a
+datatype for the message ID that can be compared really fast, and that's mostly
+numbers. Additionally, to maintain readability, you can use hashing algorithms
+like [std::hash](http://en.cppreference.com/w/cpp/utility/hash).
+
+If you plan to store any datatype as attributes/parameters, make sure that type
+conversions do not take processing time. Instead of calling conversion
+functions like std::to_string or similar, you should store your values in a way
+so that they can be casted using static_cast (or dynamic_cast in debug builds).
+
+One thing you have to think about is where you're going to add the message
+receivers. What you really don't want are blackboxes, which especially make it
+very hard to test your code. One idea is to write message receivers that just
+call functions that do the actual work.
+
+My personal reference implementation of a message bus for the game
+[FlexWorld](http://www.flexworld-game.com/home.php) only consists of a small
+number of classes: A router where you can register receivers (which are
+std::function objects) and that takes care of the message dispatching, and a
+message class containing an ID (hashed string) and any number of attributes of
+any datatype.
+
+## Conclusion
+
+In this article we talked about a nice way of removing internal code
+dependencies by replacing them with a message bus. The bus gives great
+flexibility, reduces code compilation time and allows implementing features
+step by step and in an isolated way.

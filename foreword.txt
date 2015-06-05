@@ -1,0 +1,12 @@
+# Foreword
+
+Before getting dirty, I'd like to thank you for supporting my articles about
+game development! I entirely do this in my free time, and (hopefully you knew
+this already!) the articles are also available online in [my
+blog](http://stefan.boxbox.org) for free. However seeing that people like them,
+find them useful and donate without having the need to do so is a great
+confirmation for me.
+
+Of course you'll get all future updates for free, including new articles which
+will be added irregularly. If you've got an idea for a topic that's missing in
+these articles, feel free to contact me at gdd@boxbox.org.

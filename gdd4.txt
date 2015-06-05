@@ -1,0 +1,345 @@
+# GDD#4: Errors
+
+This article is about a topic that is one of the pillars of writing good code:
+Error reporting. It is what a programmer does when they think that there's
+something wrong which should not go wrong. And because professional programmers
+want to know when something goes wrong, it's incredible important to do error
+reporting right.
+
+If you are working with another library for instance, then you need to know how
+errors are being reported at some point. Let's take
+[SFML's](http://sfml-dev.org/) image loading function as an example:
+
+{:lang="cpp"}
+~~~~~~
+bool sf::Image::loadFromFile( ... )
+~~~~~~
+
+When you call the function, you might ask yourself what happens if loading the
+file doesn't work, for whatever reason. Looking up the documentation reveals
+that in this case, the function returns `false`, and otherwise
+`true`. It's now easy to add *error handling* to your code, for example:
+
+{:lang="cpp"}
+~~~~~~
+if( my_image.loadFromFile( "image.png" ) == false ) {
+  // Print out an error message and quit the program.
+}
+~~~~~~
+
+From now on you shouldn't be required to look up any more functions regarding
+their way of reporting errors anymore, i.e. their *error reporting
+strategy*. If you have to, then the developer did not pay attention at
+following one important rule.
+
+Error reporting, no matter how it's implemented, has to be consistent
+throughout the whole code base of a project. It has to be predictable,
+comprehensible and well-defined. There are several ways of reporting errors,
+and some are for sure better than the others, but the most important thing is:
+Keep it the same in your code.
+
+Before discussing some well-established error reporting strategies, let's have
+a look at what different types of errors exist.
+
+## Error types
+
+### Programming error
+
+A programming error happens when code is being used in a wrong way. Programming
+errors can always be avoided if the code that's being used is sanely written.
+The user (programmer) of code has to be given ways of ensuring that everything
+he's calling will not generate an error.
+
+Here's a simple example:
+
+{:lang="cpp"}
+~~~~~~
+int divide( int a, int b ) {
+  return a / b;
+}
+
+int main() {
+  divide( 10, 0 );
+}
+~~~~~~
+
+The call will (hopefully) lead to a *division by zero error*, which is
+clearly a programming error. The programmer should (again hopefully) know that
+a division by zero is not possible, it is not defined mathematically. So, by
+definition, when you do that, you provoke an error that could have been avoided
+by just using the function correctly (use its documentation or other
+information to learn how to use functions; if there's no documentation, think
+about not using that code anymore, it will harm you).
+
+Here's another example that does not imply knowledge of the user:
+
+{:lang="cpp"}
+~~~~~~
+int main() {
+  std::vector<int> vector( 100 );
+  vector[105] = 1337; // 105 is out of bounds, oops.
+}
+~~~~~~
+
+That's clearly a programming error. The programmer can (and has to!) easily
+check if the used index is within the bounds of the vector (for example by
+using the vector's `size()` method). But they didn't, so *they did the
+mistake*, and not `std::vector::operator[]`.
+
+### Exception
+
+Exceptions happen when a problem arises that can't be foreseen or avoided by
+the programmer. To demonstrate exceptions, let's take a look at SFML's
+`loadFromFile` function again:
+
+{:lang="cpp"}
+~~~~~~
+bool sf::Image::loadFromFile( ... )
+~~~~~~
+
+We've already learned that it will return `false` when there's a
+problem. But why isn't this a programming error, as we can check that the file
+exists and is readable ourselves (and we could probably also find a way to
+validate that it's a valid image)? The answer is simple: You can't
+*guarantee* that between your checks and the actual call, the file will
+still be readable, because you *don't control it*. Files live on a
+shared storage, a lot can happen in the meantime.
+
+That's what we call an exception: You as the programmer did everything
+correctly, but unfortunately bad things still happened.
+
+## Error reporting strategies
+Now that we know what error types exist, let's see what mechanisms there are to
+raise errors — and identify those who should be preferred in favor of
+others.
+
+### Error codes
+The *error code strategy* is probably one of the oldest and easiest
+strategies to report errors. Functions that fail return a (mostly numeric or
+boolean) value that maps to a special error. Simple example:
+
+{:lang="cpp"}
+~~~~~~
+enum Error {
+  NO_ERROR = 0,
+  SOMETHING_MISSING,
+  SOMETHING_FAILED
+};
+
+Error try_something() { ... }
+~~~~~~
+
+That seems practical and easy to do, right? No, unfortunately not. You allow
+the user of that code to completely skip error handling. And if they do not
+skip it, they will have a lot of fun writing the error handling again and
+again. Like here:
+
+{:lang="cpp"}
+~~~~~~
+if( try_something() != Error::NO_ERROR ) {
+  // Show message depending on error code.
+  // Perhaps exit the program.
+}
+
+if( try_something_different() != Error::NO_ERROR ) {
+  // Same handling...
+}
+
+// A lot of other calls that return error codes.
+~~~~~~
+
+Returning error codes implies that the caller will check for the code and
+handle it properly. If functions are called very often, this leads to massive
+code duplication.
+
+Error codes do mostly only exist in languages that do not support error
+handling themselves, like C.
+
+Please do your users a favor by not using error codes. They will thank you for
+not being forced to check for error codes all the time.
+
+### Exceptions
+
+Exceptions (the programming term) have been invented for providing a way to
+report and handle errors directly as a language feature, which makes the
+language and programmer more responsible. They are usually implemented in a way
+that allows the programmer to *catch thrown exceptions* in a `try/catch` block.
+And if they don't, the exception is delegated until someone catches it — at
+last the language itself, which usually will crash the program.
+
+The big advantage is that the programmer does not explicitly has to check for
+errors, they will be thrown anyway and can't be ignored. The delegation of
+exceptions is another big plus: The programmer does not need to handle the
+exception when calling the function that throws it. Instead it can be caught
+from a higher step of the call stack:
+
+{:lang="cpp"}
+~~~~~~
+void load_file( const std::string& filename ) {
+  // Try to load a file,
+  // throw FileNotFoundException if that fails.
+}
+
+void load_images() {
+  load_file( "a.png" );
+  load_file( "b.png" );
+}
+
+void load_sounds() {
+  load_file( "a.ogg" );
+  load_file( "b.ogg" );
+}
+
+void load_resources() {
+  try {
+    load_images();
+    load_sounds();
+  }
+  catch( FileNotFoundException ) {
+    // ...
+  }
+}
+~~~~~~
+
+In the example the function `load_file()` is the one that throws an
+exception when something goes wrong. Both `load_images()` and
+`load_sounds()` use the function, but do *not catch possible
+exceptions!* Instead `load_resources()` takes care of that,
+which is a more centralized place.
+
+And as a final bonus, functions (or scopes in general) are left in a defined
+way (this especially counts for C++). If you create objects in a function, for
+example, and that function is left due to an exception, all your objects will
+be cleaned up properly (the destructors get called). This is not limited to the
+function that throws the exception, but all callers in the call stack until the
+exception is caught!
+
+Not to mention that exceptions can be objects, i.e. they can carry error
+messages or other useful things.
+
+### Null
+
+Some people return *null* (`nullptr` in C++) to indicate that
+something which the caller tried to get isn't there.
+
+If it's used to indicate an error, then the same as with the error code
+strategy applies: Don't do it. Example:
+
+{:lang="cpp"}
+~~~~~~
+Image* create_image() {
+  // If creating the image fails, return nullptr.
+}
+~~~~~~
+
+However it's perfectly fine to use `nullptr` as an indicator of
+»Nope, nothing there«:
+
+{:lang="cpp"}
+~~~~~~
+Image* find_image( const std::string& id ) {
+  // If image found, return its pointer, otherwise nullptr.
+}
+~~~~~~
+
+The wording is extremely important here. Try to compare the following functions
+and find out which ones do make sense:
+
+{:lang="cpp"}
+~~~~~~
+Image* find_image( ... ); // 1)
+Image& find_image( ... ); // 2)
+Image* get_image( ... ); // 3)
+Image& get_image( ... ); // 4)
+~~~~~~
+
+The word *find* means that the result is either what's being looked for
+or nothing, because the wanted item doesn't exist. `Image&` does not
+allow *nothing*. *get* however means that no matter what you give
+as parameter, you will get something, there's no option for *nothing*.
+
+So 1 is good, because `find_image` implies that the result may be
+`nullptr`, which is perfectly fine with `Image*`. 4 is
+also good, because `Image&` does not allow `nullptr`,
+what `get_image()` will never try return anyway.
+
+### Assertions
+
+So exceptions are really nice, why do we need another error reporting strategy?
+
+Remember the two different kinds of errors: Exceptions and programming errors.
+Exceptions should be used for — you guessed it — exceptions. But
+programming errors are no exceptions. That means we need something different.
+
+Programming errors only happen during development, when programming. A great
+tool for doing checks when programming is an *assertion.* It's a fact
+that you consider to be true. Like:
+
+* There is no division by zero
+* IDs that are used for an object search do really exist
+* The sum of 2 and 8 is 10
+
+If assertions fail, then the programmer using the function did something wrong,
+not the function itself. Writing an assertion can be as simple as:
+
+{:lang="cpp"}
+~~~~~~
+int divide( int a, int b ) {
+  assert( b != 0 );
+  return a / b;
+}
+~~~~~~
+
+If a program traps into an assertion, there's nothing more than can be done,
+the program will be terminated immediately. It's like provoking a state that
+can't be recovered from, something that's undefined, not possible, danger zone,
+or simply invalid. By using assertions, you clearly indicate: »You are doing
+this wrong, it wasn't supposed to work this way. Please fix your code!«
+
+A good advice is to be verbose when using assertions, like here:
+
+{:lang="cpp"}
+~~~~~~
+int divide( int a, int b ) {
+  assert( b != 0 && "Division by zero is undefined." );
+  return a / b;
+}
+~~~~~~
+
+It will give the user a helpful message (string literals are of the type
+`const char*` and never point to the address *0*, therefore
+they can be safely used in `assert()` expressions).
+
+In most languages, the assert calls do only work when building and running a
+program in debug mode. That's the reason why you should *always* be
+building in debug configuration while programming — always.
+
+Assertions are usually ignored in release configuration, however there's a
+caveat with Visual Studio: The statements will always be executed. There won't
+be any exceptions thrown however in case of failure. Since this might be
+problematic in regards of performance, you might want to take a look at
+[these alternatives](http://msdn.microsoft.com/en-us/library/ezb1wyez.aspx)
+(re-defining `assert` to `_ASSERTE` or `_ASSERT` might be useful to maintain
+platform independency; thanks to Mercy404 for pointing this out in the blog
+comments). In this blog article, I assume that assertion statements are
+skipped.
+
+Make sure that you only do checks that can be skipped at any time with
+assertions! The following would lead to serious problems when being run:
+
+{:lang="cpp"}
+~~~~~~
+Map new_map;
+assert( add_player( new_map ) == true && "Adding the player failed." );
+~~~~~~
+
+In release configuration a player won't be added to the map at all.
+
+## Conclusion
+
+This article explained how to raise errors and showed some strategies together
+with their advantages and disadvantages.
+
+Good code chooses one strategy and follows it consistently. Programming errors
+are raised differently than exceptions, and the wording of function names
+should give an idea of how the return value is to be interpreted.

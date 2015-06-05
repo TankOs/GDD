@@ -1,0 +1,236 @@
+# GDD#2: Good Habits, Techniques and Workflows
+
+Welcome to another article in the Game Development Design series. This article
+covers good habits, techniques and workflows which are important for a general
+programming behavior and how to approach developing games (or even applications
+in general) in a way that will improve your progress.
+
+We will talk about some well established techniques in the field of [rapid
+development](http://en.wikipedia.org/wiki/Rapid_application_development), which
+will move your programming focus to implementing features that are really
+required, and that those implementations are *guaranteed to work* as best as
+possible by automatically checking them.
+
+In my opinion, the typical game developer who makes games as a hobby/in an
+indie fashion works like this: You have a very rough idea, you think it might
+be funny/interesting, you create the project, you start programming on the core
+features (resource management, state managers, basic rendering etc.), then move
+on adding features which you think might be useful, and possibly implement the
+first game logic snippets.
+
+During development, the code is tested by just running it and manually
+validating its functioning. For example one feature request is rendering a
+tilemap. If you see the tilemap on screen, you're done. Sometimes you might
+also add some features just because you think they are interesting to make.
+
+Personally I'm convinced that such approaches are really *not good*. Instead
+they promote losing focus of what you are really targeting for — making a game.
+
+## YAGNI
+
+The first principle I'd like to mention is YAGNI, which means *"You Ain't Gonna
+Need It"*. Before implementing a feature, you should make sure that it's
+actually needed. A game taking place in caves does not need skyboxes. You might
+decide to add some outdoor scenes later in the development process, but for
+*now*, you don't need them.
+
+A very similar idiom is *"Make games, not engines"*. Unfortunately a lot of
+people are indeed writing engines, and totally forget about the fact that they
+actually want to make a game.
+
+So, here's what you do: Break down your game idea into smaller milestones, but
+don't think too much about things that are too far in the future or even
+undecided. A first milestone for a cave game could contain rendering a cave and
+moving around in it. This requires handling basic input, moving a camera, and
+rendering a cave with a simple texture (or even a solid color!).
+
+When you implement the mentioned features, you will exactly see the
+requirements of the engine. In this case you need a renderer with texture
+management, for example, so you add it. But you don't need shader support yet!
+Even if you're sure that you will need it later, you still don't need it now,
+so drop it!
+
+Working the YAGNI-way ensures that you focus on small things; you keep the
+scope tight. Our brains tend to think big and try to put all possible
+requirements into one solution. Unfortunately this will never ever work out. So
+give it something smaller to focus on.
+
+## Refactoring
+
+Some of you might already be sighing, some of you not. If you are sighing and
+know what refactoring is, I'm very sure you don't do it (and by doing it I mean
+regularly, not for parts that are completely messed up and don't leave you
+an option except refactoring).
+
+Refactoring is the process of taking old parts of code and moving, rewriting or
+removing them. Often refactoring means a fair amount of work. Work on something
+that's usually already done, which makes it boring for a lot of people, and
+thus they're avoiding it whenever they can. For example if you're refactoring
+the implementation of a specific feature, you will most likely not change the
+feature itself, but just the code that implements it. This can range from
+renaming a class to completely rewriting it.
+
+However: Refactoring is important and it has to be done. In short intervals,
+regularly, by every developer, in every project, always, without exceptions.
+
+In my opinion there are two main reasons for that:
+
+1. Projects are mostly not finished within days. Instead they often need weeks,
+	 months or even years to hit the release day. During that time, every single
+	 developer who's taking part will improve in programming. I'm very sure you
+	 know the feeling when you look at old code of yourself (like 1-2 years old),
+	 screaming "What the heck did I do there?!". The good thing is that it's
+	 mostly code of dead projects. The bad thing is: It will of course happen in
+	 active projects too! So make sure that as soon as you think something's
+	 "strange" or "not good", you will change it.
+2. Source code is never finished, especially when working in teams. Others
+	 might add code to classes you write, or you extend them yourself. It's very
+	 common for people to think "Oh well, I just need this one additional
+	 function, so I'll just add it to this class, because it will not require
+	 much time, and the class already exists". This should not happen, but it
+	 will, and you're sometimes even not aware of doing it. Whenever you think
+	 something like "This doesn't look right, but it works, so I'll use it", stop
+	 your work and refactor.
+
+To sum it up, refactoring results in cleaner code. You should not allow dead
+and unmaintained code. You don't want ugly code, you want to do your
+programming job right. No excuses here, refactoring needs to be done.
+
+As a bonus to cleaner code you will also get a lot of success moments.
+Everytime you finish refactoring parts of your code, you will feel that you
+just removed something that was not right. It will make working with your
+codebase a lot more fun, because you'll feel that everything is in a good
+shape. And if it's not…you will know what to do.
+
+## Testing
+
+Again I can hear some of you sighing, because I will now mention the *evil U
+word: Unit tests.* To be honest it's a shame that a high percentage of all
+developers are not testing their software except running the program/game and
+validating the results manually.
+
+Unit tests are programs that test your code for expected output. For example a
+function *add( a, b )* is supposed to sum two integers. A unit test will make
+sure that *add( 4, 5 )* returns 9.
+
+There's only one rule for unit tests: You have to test *every single line of
+your code.* This basically means that your tests have to make sure that all
+lines of all functions are triggered. This is also called *test coverage*, and
+your goal is to get as close to 100% test coverage as possible.
+
+I can already hear the excuses of people who know unit testing but don't do it:
+
+* It's time-consuming and boring.
+* It's not needed for small projects.
+* Unit tests themselves can contain bugs, so tests are not safe.
+
+Yes, it is time-consuming, and for people just getting into it, it might also
+be boring. However, spending time on something that contributes in making your
+software more bug-free is good invested time. You want to be a good programmer
+and you want to care about that your code does what it's supposed to do, in
+every possible situation.
+
+It doesn't matter if you're writing a small project or a big one. There's
+really no good reason to allow a higher chance of bugs and crashes just because
+a project is small.
+
+Unit tests are written by humans. That implies that unit tests themselves might
+contain bugs. However unit tests are not unit-tested — if you'd do that, you
+will also need unit tests for unit tests, and unit tests for unit tests for
+unit tests. That's not practical. The simple rule to avoid bugs in tests is:
+Pay attention when writing them. Anyway, what's better: Not testing your
+software at all or accepting the rare case of having a bug in a unit test?
+
+Adding unit testing to your projects gives you a lot of benefits. At first you
+can be relatively sure that all your implementations work as supposed. Secondly
+unit tests avoid being hit by side effects. Software can and usually will get
+very complex. It's impossible for developers to ensure at any time that the
+whole code is sane and working. Unit tests however are a great tool for
+detecting such errors.
+
+Let's say you wrote a function at the beginning of your project, and 3 months
+later you change it. You also adjust the unit test that validates that single
+function. But of course a lot of other functions might use it as well. If any
+other function will not work as before, you will immediately see that by
+failing tests. This is truly minimizing side effects and typical *"Oh, how
+could that happen?"* moments.
+
+Another huge advantage is the feeling you get by testing your code: If your
+tests have a good test coverage, you won't get that typical *"Hopefully my
+changes do not break anything"* thoughts when adding new code to your project.
+Instead you will just feel good, because you saw the "All tests passed."
+message before. This is also related to the *"Our brain wants to cover
+everything but can't"* problem mentioned in the refactoring part before: When
+not testing, the brain will often tell you that your changes might contain or
+provoke bugs somewhere else, which results in an uncomfortable feeling. Giving
+that responsibility to automated tests will reduce your stress level in that
+regard a lot!
+
+There exist a lot of C++ solutions for doing unit testing. Really simple but
+not so comfortable solutions are using C++ features like *assert()*. However
+I'd really recommend using a specialized library for testing. Personally I like
+[Boost's unit testing
+framework](http://www.boost.org/doc/libs/1_51_0/libs/test/doc/html/index.html).
+What you use is completely up to you, as long as you test.
+
+## Test-driven development
+
+Let's take the unit testing one step further: Test-driven development is a very
+established programming workflow, which is getting more and more popular these
+days, especially for rapid-development-oriented teams/developers. The required
+steps of the workflow are very easy:
+
+1. Write a wrong test case before you implement anything.
+2. Implement the feature for which your wrote the test.
+3. Run the tests and see them fail (due to wrong written test case).
+4. Fix test case.
+5. Run the tests again. If they still fail, validate that your test case is
+	 correct. If it is, fix the implementation.
+6. Repeat 5. until all tests pass.
+
+Why do you have to write a wrong test case? Because you want to make sure that
+the test case is actually triggered. It might sound funny, but things like
+forgetting to add the test case's .cpp file to the build system do happen from
+time to time.
+
+So, what are the advantages of test-driven development?
+
+It ensures a very high and close to 100% test coverage. If you only implement
+things for which unit tests exist, they will always be covered by tests.
+
+You automatically write examples and documentation in form of source code. This
+is very useful for other developers on your team and even yourself. Instead of
+looking at API documentation only, developers can open the proper test case and
+see how it uses the production code.
+
+By at first writing unit tests before the implementations, you force yourself
+to think about how your code shall look like, i.e. how you want to use your new
+feature. This highly reduces the risk of having to refactor stuff later. It
+also contributes to YAGNI, because you often find yourself writing test cases
+for things you don't really need, and that's really easier when writing a use
+case (the test in this case) instead of the implementation only.
+
+Your functions will be better testable, because they just have to. People who
+are testing, but not doing test-driven development often have hard times
+testing their features, because they are not atomic/isolated enough. When
+writing test cases before implementing, you will automatically try to make them
+as simple as possible, thus resulting in very small-scoped functions.
+
+Last but not least, it's fun! What's "time-consuming" and probably "boring" in
+the beginning will evolve to something fundamental. With test-driven
+development, you're usually spending more time on writing use cases and
+validating that your code works. When you're finished, and all your tests pass,
+you can just go ahead and use your sane code in production. Again a good
+feeling!
+
+## Conclusion
+
+This article is about well-established techniques and habits for programmers,
+where a lot of them are taken from the rapid development field. It gives
+suggestions for writing cleaner code, making code clean again and making sure
+that code works.
+
+Tons of other habits and techniques exist, and it's really impossible to cover
+them all. But as long as you try out and adapt some of them (and please, don't
+give up after a few days only because you're used to old habits), your code
+will be much cleaner and better maintainable in the (near) future.

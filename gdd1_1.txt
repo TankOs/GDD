@@ -1,0 +1,163 @@
+# GDD#1: The Component System (Part 1)
+
+When object-oriented programming (short: OOP) got very popular, many
+programmers tended to overuse some techniques and design patterns. One of them
+is called *inheritance*; something that's still very popular today. Of course
+that's for a good reason, because inheritance means that we can take a base
+functionality and extend it, thus resulting in extensible code.
+
+The following hierarchy seems to be quite natural: There's a *Tree* and a
+*TreeWithLeaves*.
+
+![](images/tree_treewithleaves.png)
+
+Except the visual representation, they're exactly the same. The tree with
+leaves shows – guess what – leaves, maybe animated using timers, whereas the
+normal tree is a static object. If you later decide that you need another type
+of a tree, for example a *TreeWithLeavesAndApples*, you can extend
+*TreeWithLeaves* with the extra functionality:
+
+![](images/tree_leaves_apples.png)
+
+The same procedure continues with a tree without leaves but with apples, later
+peaches etc.:
+
+![](images/tree3.png)
+
+You may already have noticed the problem: The more variations you want to
+support, the deeper the hierarchy will be. That's already bad enough, but you
+will also be writing a lot of duplicated code: *TreeWithLeavesAndApples* and
+*TreeWithApples* have different base classes, therefore the apple functionality
+has to be implemented multiple times. You could establish multiple inheritance:
+
+![](images/tree4.png)
+
+But as we know: Multiple inheritance is really bad, because it can lead to
+severe problems (e.g. in the example above, *TreeWithLeavesAndApples* inherits
+*Tree* twice!).
+
+Conclusion: Whatever you do with inheritance, it will result in monster
+hierarchies which are not flexible and very hard to maintain.
+
+## A Popular Approach: Constructed Entities
+
+Especially game developers were looking for new ideas for loosen up the
+connections between classes, i.e. eliminating monster hierarchies. One approach
+that's still widely used is *constructing entities*.
+
+Instead of inheriting from one or multiple base classes, developers tried to
+construct entities out of components. To stick with the tree example from
+above: The *TreeWithLeavesAndApples* would now be a general entity with the
+components *Tree*, *Leaves* and *Apples*.
+
+![](images/comp1.png)
+
+The advantage should be clear: Compositions of components can be completely
+customized. I can simply say: I need a tree with leaves, one with apples and
+one without any further things.
+
+Unfortunately the implementation of such a system is not always clean. Typical
+implementations look like this:
+
+{:lang="cpp"}
+~~~~~~
+Entity a_tree;
+
+a_tree.add_component( Tree( "green" ) );
+a_tree.add_component( Leaves( "autumn" ) );
+a_tree.add_component( Apples( 20 ) );
+~~~~~~
+
+Granted, this is already much cleaner than having big hierarchies, because it's
+possible to create dozens of different entity combinations without changing
+source code at all (except constructing the entities, of course). However
+there's still a drawback:
+
+You somehow have to manage the construction of entities. Some implementations
+use entity factories to overcome this problem. They define a set of *template
+entities* which are used to construct entities with a specific set of
+components. The above example would be added to a factory like this:
+
+{:lang="cpp"}
+~~~~~~
+Entity EntityFactory::create_tree(
+	const string& tree_color,
+	const string& leaves_color,
+	uint8_t num_apples
+) {
+	Entity a_tree;
+
+	a_tree.add_component( Tree( tree_color ) );
+	a_tree.add_component( Leaves( leaves_color ) );
+	a_tree.add_component( Apples( num_apples ) );
+
+	return a_tree;
+}
+
+Entity a_tree =
+	EntityFactory::create_tree( "green", "autumn", 20 );
+~~~~~~
+
+This makes constructing entities easier, and it also allows the developer to
+define a set of entities that are interesting for the game that's being
+developed. For example, if one's developing a zombie game, you might need
+*create_zombie()* and *create_weapon()* and *create_player()*.
+
+However you still have to maintain all the factories you're going to use, and
+in case you change components, you also have to adjust your factories. This is
+annoying, but avoidable!
+
+## An Automatic Approach: Self-Attaching Components
+
+Now let's talk about something that solves the previous described problems,
+which are: Monster hierarchies and annoying code maintenance.
+
+When talking about entities in a game and the real world, they can be split
+into two parts (at least in the area which is interesting for us): Properties
+and behavior. Properties might be color, size, weight etc, and behavior
+walking, jumping etc. The interesting part is that properties and behavior are
+very tightly connected. Depending on available properties we can tell of the
+possible behaviors.
+
+Let's do a little example: We define that every player who has legs, weight and
+some kind of *walking power* is able to *walk around*. That means the *walk
+behavior requires those properties* in order to work. Otherwise the player
+can't walk.
+
+The very big advantage over the other component systems is that a component
+(behavior) defines what properties it requires in order to work. If an entity
+has the properties, the component can be attached and start its work. What does
+this solve in detail?
+
+* Every component exists on its own, completely isolated.
+* Entity<->Component connections don't have to be maintained manually (in a
+	factory for example).
+* Instead, components automagically connect to entities which match the
+	requirements.
+
+The result: An extremely flexible and extensible component system, which also
+feels very natural when designing components. You can fully concentrate on
+writing the components themselves without the need to adjust and maintain
+boilerplate code. We still have to decide which entity gets what properties,
+and this is indeed similar to the entity construction factory. However
+properties do not define behavior, so that part is completely separated into
+components.
+
+Another advantage of this approach is that it can be easily extended
+externally, for example by scripts. You could either allow to change entities'
+properties which results in different behavior, or you could allow to write
+custom components that plug into the existing system without any problems.
+
+## Conclusion
+
+This article described three different approaches for writing game logic. An
+old approach using inheritance, a popular approach using constructed entities
+and a relatively new and flexible approach with self-attaching components.
+
+In my opinion, everybody should really forget about inheritance for game logic
+hierarchies/systems. It's not flexible and needs a lot of work for making it
+work and maintaining it. Constructed entities are already nice to use, as they
+are modular and changing single components is not a big deal. However using
+self-attaching components reduces the boilerplate code to a bare minimum and
+looks at the logic stuff from a different perspective: You primarily do not
+define logic, you set properties which result in behavior.

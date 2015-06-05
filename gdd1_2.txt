@@ -1,0 +1,222 @@
+# GDD#1: The Component System (Part 2)
+
+Welcome to part 2 of "Game Development Design: The Component System". Initially
+a second part wasn't planned, but as I got a lot of feedback on part 1 asking
+about how self-attaching component systems work in detail, I decided to write a
+more detailed article about that.
+
+Let's quickly recall what a self-attaching component system is: The system
+consists of entities, properties and controllers. Entities can have none or any
+amount of properties, where every property is identified by a name and a type.
+Depending on what properties an entity has, controllers are attached to it.
+
+Quick example: If there's an entity with the property velocity, the controller
+Gravity will be automatically attached to it, because it requires exactly that
+property.
+
+Before we start to go into detail, keep in mind that the GDD articles do not
+provide full source code. I believe in self-education and experimenting.
+Therefore I think that if you really want to learn and understand something,
+you have to play around with it.
+
+GDD articles are mostly about software design for C++. I try my best to keep
+them independent, but since I'm a C++ programmer myself, using examples/code in
+that language just feels natural for me.
+
+Now have fun with this article and drop me a line if you (dis)liked it or if
+you have any questions.
+
+## Properties
+
+We'll start with the smallest unit, the property. A property is simply a value
+that's identified by a name (ID) and type. For example there might be a
+property called mass of type float. The first requirement when talking about
+source code is that we need a construct that can store any value.
+
+In loosely typed languages like Python and Ruby, this isn't a real problem:
+
+{:lang="cpp"}
+~~~~~~
+variable = 42
+variable = "Hello"
+variable = 13.37
+~~~~~~
+
+However, in strongly typed languages like C++, we'll run into problems:
+
+{:lang="cpp"}
+~~~~~~
+int variable = 42;
+variable = "Hello"; // Oops!
+variable = 13.37; // Oops!
+~~~~~~
+
+When thinking a little more about what the requirements of a property are, then
+two things are clear: Each property has an ID, and each property has a value of
+a dynamic type. Since the value is the only thing that changes, we can come up
+with a simple class hierarchy:
+
+![](images/property.png)
+
+Now it's quite simple to store any type of value in a container, for example:
+
+{:lang="cpp"}
+~~~~~~
+vector<BaseProperty*> properties;
+properties.push_back( new Property<int>( 42 ) );
+properties.push_back( new Property<string>( "Hello" ) );
+properties.push_back( new Property<double>( 13.37 ) );
+~~~~~~
+
+There's only one real drawback: In C++ you can't tell of what type an object
+really is. That's why you have to downcast. Downcasting should be avoided where
+possible, because it often makes just no sense (you design class hierarchies to
+remove the need to know of what specific type objects are!). However in
+this case, it's perfectly fine. Just think of it:
+
+When you want to access a property, you expect it to be of a specific type. For
+example, if you want to get the value of the health property, you expect an
+integer:
+
+{:lang="cpp"}
+~~~~~~
+auto* health =
+	dynamic_cast<Property<int>*>( properties[0] );
+assert( health != nullptr ); // We really want health!
+~~~~~~
+
+Voilà, first topic covered, let's move on!
+
+## Entities
+
+The next thing in the self-attaching component system is the entity. An entity
+is simply an object; something that you need and use in your data model. An
+entity can be a car, a player, a gun etc. In the component system, the entity
+acts as a property container, or generally as the subject.
+
+Implementing it should be really easy. Every entity stores properties and –
+only if you like – is identified by some ID. You also need to give access to
+its properties, like setting them, searching properties by name and type and so
+on.
+
+There's one special task that we'll talk about later. For now, this is all we
+need.
+
+## Controllers
+
+Controllers are by far the most important parts in the component system. They
+are responsible for the logic, for the stuff that's about to happen: Physics,
+collision tests, shooting, walking and much more.
+
+A controller in a self-attaching component system is never manually attached to
+an entity (hence the name self-attaching). Instead it defines a set of rules
+that have to be met in order for the controller to function properly.
+
+For example, a gravity controller can only work if the entity it shall be
+attached to has a velocity property. Otherwise gravity can't increase the
+entity's velocity, and that'd be quite boring – at least for something like
+gravity.
+
+Besides requirements it's very important to understand that there's one
+controller per entity. A lot of component systems work by calling controllers
+on a set of entities (e.g. by passing them as an argument to an update()
+function). Having one controller for each (suitable) entity has one very
+important benefit: The controller-entity pair is completely isolated. You can
+do whatever you want in the controller, it will never affect anything else than
+the entity it's attached to. (There are also some optimization benefits, like
+caching property pointers; but this is just a hint for your
+implementation.)
+
+That's basically all you need to know for controllers. Let's glue everything
+together now and talk about the special task I mentioned earlier.
+
+## Systems
+
+I am really not sure if System is a good name for the gluing component of the
+self-attaching component system – if you have a better name, please tell.
+
+A system in the component system is what manages entities and controllers, and
+which is responsible for attaching controllers to entities. Let's take a look
+at a pseudo class diagram:
+
+![](images/system.png)
+
+Some words about the map type: Keep in mind that controllers exist on a
+per-entity basis, therefore they must be mapped to entities – I am not talking
+about std::map here; I leave the implementation up to you.
+
+So, what's the hardest part? Definitely the attach process. Everytime an entity
+is created or its properties change, the system has to detach all previous
+controllers from it and attach new ones that match the entity's new state.
+Example: An entity without any properties is created, and there's one
+controller gravity which requires the property velocity. It's not attached by
+the system, because the created entity does not meet the requirements. Now the
+velocity property is created, which will meet the controller's requirements;
+therefore a controller is created and attached to the entity.
+
+There's one important question: How does the system know when an entity's
+properties change? And this is the special task I talked about earlier. The
+system must somehow have the chance to subscribe to the entities and listen for
+property change events. This can be easily done using the observer pattern, for
+example.
+
+Basically this is all you need for a working self-attaching component system.
+It should be relatively clear that you have to call every controller's update()
+function when the system is run – otherwise nothing would happen.
+
+## Implementation hints
+
+In case you don't see a clear picture of what was described in this article,
+I'd like to give you some implementation tips for your experiments. At first
+here's a nice diagram that's great for getting an overview:
+
+![](images/overview.png)
+
+### How to tell the system what controllers exist
+
+The system needs to know what controllers it shall attach to entities, so at
+some point, you have to register them. A good approach would be to create
+controller factories just inside the system. Such a factory would simply check
+the controller's requirements and create it when needed. Registering a
+controller might look like this:
+
+{:lang="cpp"}
+~~~~~~
+my_system.create_factory<Gravity>();
+~~~~~~
+
+### How to specify requirements
+
+I'd suggest to create a class function (static functions in C++) in each
+controller class that returns the requirements. For the requirements
+themselves, you'll need another nice class. For example something that can be
+used like this:
+
+{:lang="cpp"}
+~~~~~~
+require_property<Vector3f>( "velocity" );
+require_property<float>( "mass" );
+~~~~~~
+
+### Optimization/Performance
+
+Please keep in mind that component systems are usually run at very high
+frequencies – normally at least at the speed of the current game's FPS, but
+often higher, because physics or other logic subsystems require it.
+
+That means you should spend some time thinking about fundamental ideas that
+speed up your component system. Use sequential arrays where possible, organize
+your data, avoid virtual functions where possible, use dynamic_cast in debug
+builds and static_cast in release builds. If you pay attention at such
+things, you will definitely have no problems running a component systems with
+lots of controllers and entities at high frequencies.
+
+## Conclusion
+
+This article gave a lot of details on what a self-attaching component system is
+and how it works. It can be used for gathering ideas for implementing your own
+component system.
+
+An implementation of this kind was programmed for the game FlexWorld – and we
+are quite happy to have it, as it allows quick prototyping and isolated
+business logic.

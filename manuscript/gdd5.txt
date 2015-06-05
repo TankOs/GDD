@@ -1,0 +1,167 @@
+# GDD#5: Optimizing and engineering
+
+Welcome to another episode of Game Development Design. This time I’m going to
+talk about the world of optimizing and engineering code: When and how much
+should I optimize? What level of generality is reasonable? What are the dangers
+of code improvements? How can I prevent common mistakes and bad habits?
+
+Let’s talk about some terms first: *Optimizing* is the process of, generally
+speaking, making things better. In programming we often refer to optimizations
+when we mean to make certain parts of programs faster, reduce memory demand
+etc. *Engineering* means tailoring code in a way that it becomes modular and
+maintainable: The levels of generality and abstractness increase.
+
+So in general, both workflows are good things. They make programs better, both
+for developing and running them. But like many other things, optimizing and
+engineering are just tools in a programmer’s toolbox. And many programmers
+forget that tools are there to help with specific problems: You need a hammer
+for hitting nails into the walls, but you don’t use the hammer for everything
+else.
+
+## Optimizing
+
+Optimizing requires the following steps:
+
+  1. Detecting an issue.
+  2. Analyzing the origin of the issue.
+  3. Analyzing the cause of the issue.
+  4. Making the optimization.
+  5. Verifying the optimization.
+
+Detecting an issue is generally very easy, as it’s mostly one of these
+situations:
+
+  * The programs runs noticeably slow (low FPS counter, stuttering etc.).
+  * You run out of memory, or a task manager shows high memory usage.
+  * Players in your multi-player game lag.
+  * Level loading times are very high.
+
+When any of those signs show up, you should consider trying to find out what’s
+happening, which brings us to step 2: *Analyzing the origin of the issue*. For
+doing this there are several ways/tools:
+
+  * **Read and comprehend code:** If you are familiar with the code base, you
+    might already have an idea of where to look.
+  * **Profile your code:** Profilers are tools that record which functions are
+    called how often, and where the most time is spent.
+  * **Trial:** Deactivate parts of your code and see if the problem is gone
+    (this can also be done in some debuggers).
+
+As soon as the problem is identified, you can proceed to step 3: *Analyzing the
+cause of the issue*. Let’s make a very little example here:
+
+In a game you have several hundreds of game objects that you need to update
+every frame. You store them all in a `std::list` (double-linked list). This
+often leads to slow(er) iterations: Since list items are not stored in
+sequence, iterating is much more expensive, because a lot of jumping around in
+memory has to be done.
+
+One possible solution is exchanging the list by a sequential container, which
+would be a `std::vector` in C++. And this is step 4: *Making the optimization*.
+
+Alright, you feel great, because you assume that you just sped-up your game.
+It’s now very important to verify that this is indeed the case. So launch the
+game and/or your tools again to verify that the issue is gone. If it’s not,
+remove the optimization again and try to find the real bottleneck. Don’t let
+useless optimizations linger around!
+
+### Premature optimization
+
+Lots of programmers start at item 4: While writing new code or glancing over
+existing code, they see parts that could be improved. Let’s say a C++
+programmers stumbles upon this for loop:
+
+{:lang="cpp"}
+~~~~~~
+for(int i = 0; i < 100; i++) {...}
+~~~~~~
+
+Reading it makes him roll his eyes: »i++ (post-increment) is slow, ++i
+(pre-increment) is much better, because it does simply increment the value
+instead of copying the old value, then incrementing and then returning the old
+value!«
+
+While theoretically this *may* be true (there are so many factors and
+eventualities that you can’t be sure when reading the code), there’s no reason
+to optimize this spot. The program will most likely not run faster. If there’s
+an issue, then it needs to by identified, as step 1 of our optimization rules
+says.
+
+Trying to optimize code that hasn’t been proven to be an issue is also widely
+known as *premature optimization*, extracted from a famous quote by *Donald
+Knuth*: »[…]premature optimization is the root of all evil[…]«. Why is premature
+optimization bad; it can’t hurt trying to improve parts of code, even if they
+don’t lead to real effects, right? No. Here’s why:
+
+  * Premature optimization accepts the risk of giving up on well engineered
+    code for often nothing in return. Fast code and code quality usually share
+    the same scale: If you increase one of them, the other usually decreases.
+  * Optimizing requires effort and thus time. Premature optimization tries to
+    make things better of which you don’t even know if they are bad. In the
+    worst case, you will have burned your time.
+  * It slows down the whole development progress. Instead of focussing on
+    making things work, you focus on improving things that are already working.
+
+### Over-optimizing
+
+This is a tough one: A programmer spotted a slow-performing piece of code and
+has a reason to optimize it. But instead of going with a simple solution that
+erases the issue, he begins to tailor *"perfect"* tricks and hacks to make it
+even faster. Every micro second has to be saved!
+
+This goes hand in hand with premature optimization and violates step 1: There
+has to be a real problem, first!
+
+## Code engineering
+
+Programming beginners have one very important advantage when it comes to
+writing code: They lack experience which includes that special abstract
+thinking you gain as an experienced programmer. When you have been doing
+programming for a longer time, you are able to think much more abstract. You
+can see problems before you write code. And you tend to write code that not
+only solves that one specific problem, but instead – dramatically spoken –
+saves the world.
+
+Beginners don’t do that. Beginners see the specific problem, and they engineer
+a specific solution. That’s it. 1 + 1 = 2. Not x + y = z. It’s that simple.
+
+Of course, generic code is better. Generic code can be re-used (*modularity*),
+used by different subjects (*generality*) and it’s less error-prone, because
+it’s used more often (*safety*). But it’s the same as with optimizations: There
+has to be a demand.
+
+This is similar to what I have mentioned in GDD#2: YAGNI, You Ain’t Gonna Need
+It. It’s nice to think about the future in general, but don’t step into the
+trap of over-engineering: **maybe** you need this specific piece of code
+somewhere else. Or **maybe** you **should** make this exchangeable so that
+**if** you need it, you can do it. But whenever you think something like »Uh,
+this *could/might* be useful!«:
+
+Do **not** move on with your idea. If it’s not a requirement, don’t implement
+it. There’s already so much dead code in libraries and programs that’s not
+being used at all or very rarely. The disadvantages of such over-engineering
+are:
+
+  * Lots of effort has to be put into engineering generic solutions, as they
+    require a lot of thinking and trial.
+  * Highly generic code for only specific problems is not used often, often
+    resulting in less code safety and quality.
+  * The development progress is slowed down seriously, because already working
+    solutions are “perfectionized”.
+  * Developers start to feel frustrated because even though they spent huge
+    amounts of time on improving code, the end result doesn’t change at all.
+
+Concentrate on moving forward instead. Try to be a little bit more like the
+beginner: Focus on specific problems. And if you come to a point with a problem
+that’s similar to one you have solved before, then yes: Now it’s time to
+improve and do some smart engineering, let the refactoring begin!
+
+## Conclusion
+
+This article was about optimizing and engineering: When to optimize, when to
+make generic code, what traps are waiting for you, and how to avoid them. Try
+to concentrate on the real problems you have, and don’t waste time with things
+that nobody actually needs. Nobody is perfect, and code does not need to be
+perfect: Code has to work, it has to be maintainable and readable, and it must
+run at a minimum speed. If those conditions are met, then you, the programmer,
+have nothing more to do.

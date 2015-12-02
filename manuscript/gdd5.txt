@@ -119,7 +119,7 @@ writing code: They lack experience which includes that special abstract
 thinking you gain as an experienced programmer. When you have been doing
 programming for a longer time, you are able to think much more abstract. You
 can see problems before you write code. And you tend to write code that not
-only solves that one specific problem, but instead – dramatically spoken –
+only solves that one specific problem, but instead – dramatically speaking –
 saves the world.
 
 Beginners don’t do that. Beginners see the specific problem, and they engineer
